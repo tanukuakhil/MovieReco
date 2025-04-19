@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MovieRec | Movie Recommendations</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #121212;
+      color: white;
+    }
+    .navbar {
+      background-color: #1e1e1e;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+    .btn-outline-warning {
+      color: #ffc107;
+      border-color: #ffc107;
+    }
+    .btn-outline-warning:hover {
+      background-color: #ffc107;
+      color: #000;
+    }
+    .container {
+      margin-top: 80px;
+    }
+
+    /* Movie card styling */
+    .movie-card {
+      background-color: #1e1e1e;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      transition: transform 0.2s ease;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+
+    .movie-card img {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .movie-card .card-body {
+      padding: 10px;
+      text-align: center;
+      color: #fff;
+    }
+
+    /* Grid for search results */
+    .search-results-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr); /* 8 columns per row */
+      gap: 16px;
+      padding: 20px;
+    }
+
+    /* Make grid responsive */
+    @media (max-width: 1200px) {
+      .search-results-grid {
+        grid-template-columns: repeat(6, 1fr); /* 6 columns on medium screens */
+      }
+    }
+
+    @media (max-width: 992px) {
+      .search-results-grid {
+        grid-template-columns: repeat(5, 1fr); /* 5 columns on smaller screens */
+      }
+    }
+
+    @media (max-width: 768px) {
+      .search-results-grid {
+        grid-template-columns: repeat(4, 1fr); /* 4 columns on small screens */
+      }
+    }
+
+    @media (max-width: 576px) {
+      .search-results-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 columns on very small screens */
+      }
+    }
+
+    .genre-buttons {
+      margin-top: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .genre-button {
+      background-color: #2c2c2c;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .genre-button:hover {
+      background-color: #ffc107;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fixed Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark px-3">
+    <a class="navbar-brand" id="homeLogo" href="index.html">🎬 MovieRec</a>
+    <div class="ms-auto d-flex">
+      <button class="btn btn-outline-light me-2" onclick="location.href='login.html'">Login</button>
+      <button class="btn btn-outline-warning" onclick="location.href='watchlist.html'">Watchlist</button>
+    </div>
+  </nav>
+
+  <!-- Search Bar -->
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mt-3">
+      <input type="text" id="searchInput" class="form-control" placeholder="Search for a movie..." onkeyup="searchMovies(event)" />
+      <button id="searchButton" class="btn btn-warning ms-2" onclick="searchMovies()">Search</button>
+    </div>
+  </div>
+
+  <!-- Genre Filter Section -->
+  <div class="container mt-5">
+    <h3>Select Genre</h3>
+    <div class="genre-buttons" id="genreButtonsContainer">
+      <!-- Genre buttons will be added here dynamically -->
+    </div>
+  </div>
+
+  <!-- Search Results -->
+  <div id="searchResults" class="container mt-4">
+    <h2 id="searchResultsHeading" style="display: none;">Search Results</h2>
+    <div class="search-results-grid" id="searchResultsContainer"></div>
+  </div>
+
+  <!-- Top Recommendations Section -->
+  <div class="container mt-5">
+    <h2>Top Recommendations</h2>
+    <div class="search-results-grid" id="topRecommendationsContainer">
+      <!-- Recommendations will be added here dynamically -->
+    </div>
+  </div>
+
+  <!-- Movie Details Modal -->
+  <div class="modal fade" id="movieDetailsModal" tabindex="-1" aria-labelledby="movieDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="movieDetailsModalLabel">Movie Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <h5 id="movieTitle"></h5>
+          <p id="movieDescription"></p>
+          <h6>Available on:</h6>
+          <ul id="platformList"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Fetch genres from TMDB API
+    function fetchGenres() {
+      fetch('https://api.themoviedb.org/3/genre/movie/list?api_key=90bc69ab061726f950a9defcb19d2ec5')
+        .then(response => response.json())
+        .then(data => {
+          const genres = data.genres;
+          const genreButtonsContainer = document.getElementById('genreButtonsContainer');
+          genres.slice(0, 20).forEach(genre => { // Display only 20 genres
+            const genreButton = document.createElement('button');
+            genreButton.classList.add('genre-button');
+            genreButton.innerHTML = genre.name;
+            genreButton.onclick = () => filterMoviesByGenre(genre.id);
+            genreButtonsContainer.appendChild(genreButton);
+          });
+        })
+        .catch(error => console.error('Error fetching genres:', error));
+    }
+
+    // Fetch top recommendations
+    function fetchTopRecommendations() {
+      fetch('https://api.themoviedb.org/3/movie/popular?api_key=90bc69ab061726f950a9defcb19d2ec5')
+        .then(response => response.json())
+        .then(data => {
+          const movies = data.results;
+          const topRecommendationsContainer = document.getElementById('topRecommendationsContainer');
+          movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.classList.add('movie-card');
+            movieCard.innerHTML = `
+              <div class="card bg-dark text-white mb-3" data-id="${movie.id}">
+                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="card-img-top" alt="${movie.title}">
+                <div class="card-body">
+                  <h5 class="card-title">${movie.title}</h5>
+                  <button class="btn btn-outline-warning" onclick="addToWatchlist(${movie.id})">Add to Watchlist</button>
+                </div>
+              </div>
+            `;
+            topRecommendationsContainer.appendChild(movieCard);
+            movieCard.addEventListener('click', () => showMovieDetails(movie.id));
+          });
+        })
+        .catch(error => console.error('Error fetching top recommendations:', error));
+    }
+
+    // Filter movies based on genre
+    function filterMoviesByGenre(genreId) {
+      fetch(`https://api.themoviedb.org/3/discover/movie?api_key=90bc69ab061726f950a9defcb19d2ec5&with_genres=${genreId}`)
+        .then(response => response.json())
+        .then(data => {
+          const movies = data.results;
+          const searchResultsContainer = document.getElementById('searchResultsContainer');
+          const searchResultsHeading = document.getElementById('searchResultsHeading');
+          searchResultsContainer.innerHTML = ''; // Clear previous search results
+
+          if (movies.length > 0) {
+            searchResultsHeading.style.display = 'block'; // Show "Search Results" heading
+          } else {
+            searchResultsHeading.style.display = 'none'; // Hide heading if no results
+          }
+
+          movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.classList.add('movie-card');
+            movieCard.innerHTML = `
+              <div class="card bg-dark text-white mb-3" data-id="${movie.id}">
+                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="card-img-top" alt="${movie.title}">
+                <div class="card-body">
+                  <h5 class="card-title">${movie.title}</h5>
+                  <button class="btn btn-outline-warning" onclick="addToWatchlist(${movie.id})">Add to Watchlist</button>
+                </div>
+              </div>
+            `;
+            searchResultsContainer.appendChild(movieCard);
+            movieCard.addEventListener('click', () => showMovieDetails(movie.id));
+          });
+        })
+        .catch(error => console.error('Error filtering movies by genre:', error));
+    }
+
+    // Function to search for movies
+    function searchMovies(event = null) {
+      const query = document.getElementById('searchInput').value.trim();
+      const searchResultsContainer = document.getElementById('searchResultsContainer');
+      const searchResultsHeading = document.getElementById('searchResultsHeading');
+
+      if (query === '') {
+        searchResultsContainer.innerHTML = ''; // Clear search results if no query
+        return;
+      }
+
+      if (event && event.key === 'Enter') {
+        document.getElementById('searchButton').click(); // Trigger search button if Enter key is pressed
+      }
+
+      fetch(`https://api.themoviedb.org/3/search/movie?api_key=90bc69ab061726f950a9defcb19d2ec5&query=${query}`)
+        .then(response => response.json())
+        .then(data => {
+          const movies = data.results;
+          searchResultsContainer.innerHTML = ''; // Clear previous search results
+
+          if (movies.length > 0) {
+            searchResultsHeading.style.display = 'block'; // Show "Search Results" heading
+          } else {
+            searchResultsHeading.style.display = 'none'; // Hide heading if no results
+          }
+
+          movies.forEach(movie => {
+            const movieCard = document.createElement('div');
+            movieCard.classList.add('movie-card');
+            movieCard.innerHTML = `
+              <div class="card bg-dark text-white mb-3" data-id="${movie.id}">
+                <img src="https://image.tmdb.org/t/p/w500${movie.poster_path}" class="card-img-top" alt="${movie.title}">
+                <div class="card-body">
+                  <h5 class="card-title">${movie.title}</h5>
+                  <button class="btn btn-outline-warning" onclick="addToWatchlist(${movie.id})">Add to Watchlist</button>
+                </div>
+              </div>
+            `;
+            searchResultsContainer.appendChild(movieCard);
+            movieCard.addEventListener('click', () => showMovieDetails(movie.id));
+          });
+        });
+    }
+
+    // Function to add movie to watchlist
+    function addToWatchlist(movieId) {
+      const username = localStorage.getItem('loggedInUser');
+      if (!username) {
+        alert('Please log in to add movies to your watchlist.');
+        return;
+      }
+
+      const key = `watchlist_${username}`;
+      let watchlist = JSON.parse(localStorage.getItem(key)) || [];
+
+      if (watchlist.some(movie => movie.id === movieId)) {
+        alert('Already in your watchlist!');
+        return;
+      }
+
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=90bc69ab061726f950a9defcb19d2ec5`)
+        .then(res => res.json())
+        .then(movie => {
+          watchlist.push({ id: movie.id, title: movie.title, poster_path: movie.poster_path });
+          localStorage.setItem(key, JSON.stringify(watchlist));
+          alert('Movie added to your watchlist!');
+        });
+    }
+
+    // Function to show movie details
+    function showMovieDetails(movieId) {
+      fetch(`https://api.themoviedb.org/3/movie/${movieId}?api_key=90bc69ab061726f950a9defcb19d2ec5&append_to_response=watch/providers`)
+        .then(response => response.json())
+        .then(data => {
+          const { title, overview, watch_providers } = data;
+          const movieTitle = document.getElementById('movieTitle');
+          const movieDescription = document.getElementById('movieDescription');
+          const platformList = document.getElementById('platformList');
+          movieTitle.textContent = title;
+          movieDescription.textContent = overview;
+          platformList.innerHTML = '';
+
+          const platforms = watch_providers.results.US;
+          if (platforms) {
+            platforms.flatrate.forEach(platform => {
+              const li = document.createElement('li');
+              li.innerHTML = `<a href="${platform.url}" target="_blank">${platform.provider_name}</a>`;
+              platformList.appendChild(li);
+            });
+          }
+
+          const myModal = new bootstrap.Modal(document.getElementById('movieDetailsModal'));
+          myModal.show();
+        })
+        .catch(error => console.error('Error fetching movie details:', error));
+    }
+
+    // Call to fetch genres and top recommendations on page load
+    window.onload = function() {
+      fetchGenres();
+      fetchTopRecommendations();
+    };
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
