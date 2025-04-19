@@ -24,12 +24,10 @@ app.use('/api/watchlist', watchlistRoutes);
 // Serve static files for production
 if (process.env.NODE_ENV === 'production') {
   // Set static folder for frontend build (adjust this to your actual folder structure)
-  app.use(express.static(path.join(__dirname, 'build')));
-
-  // Serve index.html when accessing the root route
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Adjust the path as needed
-  });
+  app.use(express.static(path.join(__dirname, 'public')));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 } else {
   // In development, you might want to run something different or just return a basic message
   app.get('/', (req, res) => {
