@@ -28,7 +28,7 @@ app.use('/api/auth', authRoutes); // New auth route
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'public')));
-  app.get('*', (req, res) => {
+  app.get('/*', (req, res) => {  // changed '*' to '/*'
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 } else {
