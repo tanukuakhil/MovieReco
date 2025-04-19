@@ -1,8 +1,11 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');  // For serving static files
-const watchlistRoutes = require('./routes/watchlist');  // Add watchlist routes
+const path = require('path');
+require('dotenv').config(); // Required for .env variables
+
+const watchlistRoutes = require('./routes/watchlist');
+const authRoutes = require('./routes/auth'); // New auth routes
 
 const app = express();
 
@@ -15,21 +18,20 @@ mongoose.connect(process.env.MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+.then(() => console.log("MongoDB connected"))
+.catch(err => console.log(err));
 
-// Use the watchlist routes
+// Routes
 app.use('/api/watchlist', watchlistRoutes);
+app.use('/api/auth', authRoutes); // New auth route
 
-// Serve static files for production
+// Serve static files in production
 if (process.env.NODE_ENV === 'production') {
-  // Set static folder for frontend build (adjust this to your actual folder structure)
   app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 } else {
-  // In development, you might want to run something different or just return a basic message
   app.get('/', (req, res) => {
     res.send('API is running');
   });
